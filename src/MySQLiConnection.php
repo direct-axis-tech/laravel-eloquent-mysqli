@@ -18,6 +18,7 @@ use Illuminate\Database\Query\Grammars\MySqlGrammar as QueryGrammar;
 use Illuminate\Database\Query\Processors\MySqlProcessor;
 use Illuminate\Database\Schema\Grammars\MySqlGrammar as SchemaGrammar;
 use Illuminate\Database\Schema\MySqlBuilder;
+use LaravelEloquentMySQLi\Wrappers\PDOWrapperForMysqli;
 use mysqli;
 
 class MySQLiConnection extends Connection implements ConnectionInterface
@@ -515,7 +516,7 @@ class MySQLiConnection extends Connection implements ConnectionInterface
      */
     public function getPdo()
     {
-        return $this->getMySqli();
+        return PDOWrapperForMysqli::wrap($this->getMySqli());
     }
 
     /**
@@ -525,7 +526,7 @@ class MySQLiConnection extends Connection implements ConnectionInterface
      */
     public function getReadPdo()
     {
-        return $this->getReadMySqli();
+        return PDOWrapperForMysqli::wrap($this->getReadMySqli());
     }
 
     /**
