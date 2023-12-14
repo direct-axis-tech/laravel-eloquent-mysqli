@@ -1,15 +1,15 @@
 {
-    "name": "shakahl/laravel-eloquent-mysqli",
+    "name": "direct-axis-tech/laravel-eloquent-mysqli",
     "type": "library",
     "description": "MySQLi driver (connector) for Laravel 5.8 Eloquent database",
     "keywords": ["Laravel", "Lumen", "MySQL", "mysqli", "driver", "connector"],
-    "homepage": "http://github.com/shakahl/laravel-eloquent-mysqli",
+    "homepage": "http://github.com/direct-axis-tech/laravel-eloquent-mysqli",
     "license": "MIT",
     "authors": [
         {
             "name": "Soma Szelpal",
             "email": "szelpalsoma@gmail.com",
-            "homepage": "https://github.com/shakahl"
+            "homepage": "https://github.com/direct-axis-tech"
         }
     ],
     "require": {
