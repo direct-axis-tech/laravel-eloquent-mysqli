@@ -200,12 +200,13 @@ class MySQLiConnection extends Connection implements ConnectionInterface
             $result = $statement->get_result();
 
             if ($result) {
-                return $result->fetch_all(MYSQLI_ASSOC);
+                return array_map(
+                    function ($v) { return (object)$v; },
+                    $result->fetch_all(MYSQLI_ASSOC)
+                );
             }
 
             return [];
-
-            //return $statement->fetch_all(MYSQLI_ASSOC);
         });
     }
 
