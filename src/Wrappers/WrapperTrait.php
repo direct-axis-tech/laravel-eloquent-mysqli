@@ -18,11 +18,6 @@ trait WrapperTrait {
         return call_user_func_array([$this->singleton, $method], $arguments);
     }
 
-    public function __callStatic($method, $arguments)
-    {
-        return call_user_func_array([$this->singleton, $method], $arguments);
-    }
-
     public function __get($property)
     {
         return $this->singleton->$property;
