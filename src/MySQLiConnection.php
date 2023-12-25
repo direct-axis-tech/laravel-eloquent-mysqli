@@ -241,7 +241,9 @@ class MySQLiConnection extends Connection implements ConnectionInterface
             // mode and prepare the bindings for the query. Once that's done we will be
             // ready to execute the query against the database and return the cursor.
 
-            $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            if ($this->isAssoc($bindings)) {
+                $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            }
 
             $statement = $this->prepared2($this->getMySqliForSelect($useReadPdo)
                 ->prepare($query));
@@ -298,7 +300,9 @@ class MySQLiConnection extends Connection implements ConnectionInterface
                 return true;
             }
 
-            $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            if ($this->isAssoc($bindings)) {
+                $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            }
 
             $statement = $this->getMySqli()->prepare($query);
 
@@ -322,14 +326,16 @@ class MySQLiConnection extends Connection implements ConnectionInterface
                 return 0;
             }
 
-            $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            if ($this->isAssoc($bindings)) {
+                $query = $this->buildSql($query, $this->prepareBindings($bindings));
+            }
 
             // For update or delete statements, we want to get the number of rows affected
             // by the statement and return that back to the developer. We'll first need
             // to execute the statement and then we'll use PDO to fetch the affected.
             $statement = $this->getMySqli()->prepare($query);
 
-            //$this->bindValues($statement, $this->prepareBindings($bindings));
+            $this->bindValues($statement, $this->prepareBindings($bindings));
 
             $statement->execute();
 
