@@ -27,7 +27,7 @@ class PDOWrapperForMysqli {
      *
      * @var int
      */
-    protected $errorMode = PDO::ERRMODE_SILENT;
+    protected $errorMode = PDO::ERRMODE_EXCEPTION;
 
     /**
      * Track autocommit state (mysqli doesn't provide a direct way to query this).

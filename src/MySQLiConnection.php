@@ -19,6 +19,7 @@ use Illuminate\Database\Query\Processors\MySqlProcessor;
 use Illuminate\Database\Schema\Grammars\MySqlGrammar as SchemaGrammar;
 use Illuminate\Database\Schema\MySqlBuilder;
 use mysqli;
+use PDOException;
 
 class MySQLiConnection extends Connection implements ConnectionInterface
 {
@@ -189,12 +190,21 @@ class MySQLiConnection extends Connection implements ConnectionInterface
             // For select statements, we'll simply execute the query and return an array
             // of the database result set. Each element in the array will be a single
             // row from the database table, and will either be an array or objects.
-            $statement = $this->prepared2($this->getMySqliForSelect($useRead)
-                ->prepare($query));
+            $mysqli = $this->getMySqliForSelect($useRead);
+            $statement = $mysqli->prepare($query);
+            
+            if ($statement === false) {
+                $this->checkForErrors($mysqli);
+            }
+            
+            $statement = $this->prepared2($statement);
 
             $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            $statement->execute();
+            $executeResult = $statement->execute();
+            if ($executeResult === false) {
+                $this->checkForErrors($statement);
+            }
 
             $result = $statement->get_result();
 
@@ -244,9 +254,14 @@ class MySQLiConnection extends Connection implements ConnectionInterface
                 $query = $this->buildSql($query, $this->prepareBindings($bindings));
             }
 
-            $statement = $this->prepared2($this->getMySqliForSelect($useReadPdo)
-                ->prepare($query));
-
+            $mysqli = $this->getMySqliForSelect($useReadPdo);
+            $statement = $mysqli->prepare($query);
+            
+            if ($statement === false) {
+                $this->checkForErrors($mysqli);
+            }
+            
+            $statement = $this->prepared2($statement);
 
             $this->bindValues(
                 $statement, $this->prepareBindings($bindings)
@@ -255,7 +270,10 @@ class MySQLiConnection extends Connection implements ConnectionInterface
             // Next, we'll execute the query against the database and return the statement
             // so we can return the cursor. The cursor will use a PHP generator to give
             // back one row at a time without using a bunch of memory to render them.
-            $statement->execute();
+            $result = $statement->execute();
+            if ($result === false) {
+                $this->checkForErrors($statement);
+            }
 
             return $statement;
         });
@@ -303,11 +321,21 @@ class MySQLiConnection extends Connection implements ConnectionInterface
                 $query = $this->buildSql($query, $this->prepareBindings($bindings));
             }
 
-            $statement = $this->getMySqli()->prepare($query);
+            $mysqli = $this->getMySqli();
+            $statement = $mysqli->prepare($query);
+            
+            if ($statement === false) {
+                $this->checkForErrors($mysqli);
+            }
 
             $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            return $statement->execute();
+            $result = $statement->execute();
+            if ($result === false) {
+                $this->checkForErrors($statement);
+            }
+            
+            return $result;
         });
     }
 
@@ -332,11 +360,19 @@ class MySQLiConnection extends Connection implements ConnectionInterface
             // For update or delete statements, we want to get the number of rows affected
             // by the statement and return that back to the developer. We'll first need
             // to execute the statement and then we'll use PDO to fetch the affected.
-            $statement = $this->getMySqli()->prepare($query);
+            $mysqli = $this->getMySqli();
+            $statement = $mysqli->prepare($query);
+            
+            if ($statement === false) {
+                $this->checkForErrors($mysqli);
+            }
 
             $this->bindValues($statement, $this->prepareBindings($bindings));
 
-            $statement->execute();
+            $result = $statement->execute();
+            if ($result === false) {
+                $this->checkForErrors($statement);
+            }
 
             $result = $statement->get_result();
 
@@ -361,7 +397,14 @@ class MySQLiConnection extends Connection implements ConnectionInterface
                 return true;
             }
 
-            return (bool)$this->getMySqli()->query($query);
+            $mysqli = $this->getMySqli();
+            $result = $mysqli->query($query);
+            
+            if ($result === false) {
+                $this->checkForErrors($mysqli);
+            }
+            
+            return (bool)$result;
         });
     }
 
@@ -723,5 +766,76 @@ class MySQLiConnection extends Connection implements ConnectionInterface
         $keys = array_keys($arr);
 
         return array_keys($keys) !== $keys;
+    }
+
+    /**
+     * Check for mysqli errors and throw PDOException if found.
+     *
+     * @param \mysqli|\mysqli_stmt|null $resource The mysqli connection or statement to check
+     * @return void
+     * @throws PDOException
+     */
+    protected function checkForErrors($resource = null)
+    {
+        $errno = 0;
+        $error = '';
+
+        if ($resource instanceof \mysqli_stmt) {
+            // Check statement errors
+            $errno = $resource->errno;
+            $error = $resource->error;
+        } elseif ($resource instanceof \mysqli) {
+            // Check connection errors
+            $errno = $resource->errno;
+            $error = $resource->error;
+        } else {
+            // Check default connection errors
+            $mysqli = $this->getMySqli();
+            $errno = $mysqli->errno;
+            $error = $mysqli->error;
+        }
+
+        if ($errno !== 0) {
+            // Map MySQL error code to SQLSTATE
+            $sqlstate = $this->mapMySqlErrorToSqlState($errno);
+            throw new PDOException(
+                "SQLSTATE[{$sqlstate}]: {$error}",
+                $errno
+            );
+        }
+    }
+
+    /**
+     * Map MySQL error code to SQLSTATE code.
+     *
+     * @param int $errorCode
+     * @return string
+     */
+    protected function mapMySqlErrorToSqlState($errorCode)
+    {
+        $sqlstateMap = [
+            1045 => '28000', // Access denied
+            1049 => '42000', // Unknown database
+            1054 => '42S22', // Unknown column
+            1062 => '23000', // Duplicate entry
+            1064 => '42000', // SQL syntax error
+            1146 => '42S02', // Table doesn't exist
+            1216 => '23000', // Foreign key constraint
+            1217 => '23000', // Foreign key constraint
+            1451 => '23000', // Foreign key constraint fails
+            1452 => '23000', // Foreign key constraint fails
+        ];
+
+        if (isset($sqlstateMap[$errorCode])) {
+            return $sqlstateMap[$errorCode];
+        }
+
+        // For unmapped errors, return a generic SQLSTATE
+        if ($errorCode >= 1000 && $errorCode < 2000) {
+            return 'HY000'; // General error
+        }
+
+        // Return error code as string if no mapping found
+        return (string) $errorCode;
     }
 }
