@@ -16,3 +16,7 @@ bootstrap/cache/
 
 # Idea
 .idea
+
+# Development tools
+.history
+.vscode
