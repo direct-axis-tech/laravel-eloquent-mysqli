@@ -1,19 +1,49 @@
 <?php
 
-namespace LaravelEloquentMySQLi\Wrappers;
+namespace LaravelEloquentMySQLi;
 
+use mysqli;
 use PDO;
 use RuntimeException;
 
 class PDOWrapperForMysqli {
-    use WrapperTrait;
-
     /**
      * The active MySqli connection.
      *
      * @var \mysqli
      */
-    protected $singleton;
+    protected mysqli $singleton;
+
+    public function __construct(mysqli $singleton)
+    {
+        $this->singleton = $singleton;
+    }
+
+    public function __call($method, $arguments)
+    {
+        return call_user_func_array([$this->singleton, $method], $arguments);
+    }
+
+    public function __get($property)
+    {
+        return $this->singleton->$property;
+    }
+
+    public function __set($property, $value)
+    {
+        $this->singleton->$property = $value;
+    }
+
+    /**
+     * Wrapper function for fluent syntax
+     *
+     * @param mysqli $singleton
+     * @return static
+     */
+    public static function wrap(mysqli $singleton)
+    {
+        return new static($singleton);
+    }
 
     /**
      * Polyfill for PDO lastInsertId

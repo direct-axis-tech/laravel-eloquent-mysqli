@@ -18,7 +18,6 @@ use Illuminate\Database\Query\Grammars\MySqlGrammar as QueryGrammar;
 use Illuminate\Database\Query\Processors\MySqlProcessor;
 use Illuminate\Database\Schema\Grammars\MySqlGrammar as SchemaGrammar;
 use Illuminate\Database\Schema\MySqlBuilder;
-use LaravelEloquentMySQLi\Wrappers\PDOWrapperForMysqli;
 use mysqli;
 
 class MySQLiConnection extends Connection implements ConnectionInterface
